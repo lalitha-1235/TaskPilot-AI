@@ -1,4 +1,5 @@
 import { motion } from "framer-motion";
+import { Link } from "react-router-dom";
 
 function Hero() {
   return (
@@ -26,9 +27,9 @@ function Hero() {
           </p>
 
           <div className="mt-10 flex gap-4">
-            <button className="px-7 py-3 rounded-xl bg-gradient-to-r from-purple-600 to-cyan-500 font-semibold">
+            <Link to="/login" className="px-7 py-3 rounded-xl bg-gradient-to-r from-purple-600 to-cyan-500 font-semibold hover:opacity-90 active:scale-[0.98] transition-all outline-none">
               Get Started
-            </button>
+            </Link>
 
             <button className="px-7 py-3 rounded-xl border border-gray-700 hover:border-cyan-400">
               Watch Demo
