@@ -54,4 +54,9 @@ const TaskSchema = new mongoose.Schema(
   }
 );
 
+// Indexes for common query patterns
+TaskSchema.index({ createdBy: 1, status: 1 });
+TaskSchema.index({ createdBy: 1, dueDate: 1 });
+TaskSchema.index({ createdBy: 1, priority: 1 });
+
 module.exports = mongoose.model("Task", TaskSchema);

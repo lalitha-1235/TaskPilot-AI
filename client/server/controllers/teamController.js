@@ -1,6 +1,7 @@
 const mongoose = require("mongoose");
 const Team = require("../models/Team");
 const User = require("../models/User");
+const { logActivity } = require("../utils/activityLogger");
 
 // @desc    Create a new team
 // @route   POST /api/teams
@@ -34,6 +35,17 @@ exports.createTeam = async (req, res) => {
     const populatedTeam = await Team.findById(team._id)
       .populate("owner", "name email avatar")
       .populate("members.user", "name email avatar");
+
+    // Log activity
+    logActivity(
+      req.user._id,
+      "Team Created",
+      "Team",
+      team._id,
+      `Team created: ${team.name}`,
+      req.ip,
+      req.headers["user-agent"]
+    );
 
     return res.status(201).json({
       success: true,
@@ -182,6 +194,17 @@ exports.updateTeam = async (req, res) => {
       .populate("owner", "name email avatar")
       .populate("members.user", "name email avatar");
 
+    // Log activity
+    logActivity(
+      req.user._id,
+      "Team Updated",
+      "Team",
+      updatedTeam._id,
+      `Team details updated: ${updatedTeam.name}`,
+      req.ip,
+      req.headers["user-agent"]
+    );
+
     return res.status(200).json({
       success: true,
       data: updatedTeam,
@@ -235,6 +258,17 @@ exports.deleteTeam = async (req, res) => {
     }
 
     await Team.findByIdAndDelete(id);
+
+    // Log activity
+    logActivity(
+      req.user._id,
+      "Team Deleted",
+      "Team",
+      team._id,
+      `Team deleted: ${team.name}`,
+      req.ip,
+      req.headers["user-agent"]
+    );
 
     return res.status(200).json({
       success: true,
@@ -349,6 +383,17 @@ exports.addMember = async (req, res) => {
       .populate("owner", "name email avatar")
       .populate("members.user", "name email avatar");
 
+    // Log activity
+    logActivity(
+      req.user._id,
+      "Team Member Added",
+      "Team",
+      team._id,
+      `Added member ${userToAdd.name} (${userToAdd.email}) to team`,
+      req.ip,
+      req.headers["user-agent"]
+    );
+
     return res.status(200).json({
       success: true,
       message: `${userToAdd.name} has been added to the team as ${memberRole}`,
@@ -451,6 +496,17 @@ exports.removeMember = async (req, res) => {
     const populatedTeam = await Team.findById(id)
       .populate("owner", "name email avatar")
       .populate("members.user", "name email avatar");
+
+    // Log activity
+    logActivity(
+      req.user._id,
+      "Team Member Removed",
+      "Team",
+      team._id,
+      `Removed member user ID ${userId} from team`,
+      req.ip,
+      req.headers["user-agent"]
+    );
 
     return res.status(200).json({
       success: true,

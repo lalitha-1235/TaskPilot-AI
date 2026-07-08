@@ -1,5 +1,6 @@
 const User = require("../models/User");
 const jwt = require("jsonwebtoken");
+const { logActivity } = require("../utils/activityLogger");
 
 // Helper to sign JWT tokens
 const generateToken = (id) => {
@@ -43,6 +44,17 @@ exports.register = async (req, res) => {
 
     // Generate token
     const token = generateToken(user._id);
+
+    // Log activity
+    logActivity(
+      user._id,
+      "User Registered",
+      "Authentication",
+      user._id,
+      `User registered: ${user.name} (${user.email})`,
+      req.ip,
+      req.headers["user-agent"]
+    );
 
     return res.status(201).json({
       success: true,
@@ -98,6 +110,17 @@ exports.login = async (req, res) => {
 
     // Generate token
     const token = generateToken(user._id);
+
+    // Log activity
+    logActivity(
+      user._id,
+      "User Logged In",
+      "Authentication",
+      user._id,
+      `User logged in: ${user.email}`,
+      req.ip,
+      req.headers["user-agent"]
+    );
 
     return res.status(200).json({
       success: true,

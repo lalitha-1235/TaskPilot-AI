@@ -29,9 +29,9 @@ const protect = async (req, res, next) => {
     req.user = await User.findById(decoded.id);
 
     if (!req.user) {
-      return res.status(404).json({
+      return res.status(401).json({
         success: false,
-        message: "No user found with this id",
+        message: "Not authorized: user account no longer exists",
       });
     }
 

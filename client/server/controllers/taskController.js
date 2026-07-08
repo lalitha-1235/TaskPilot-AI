@@ -1,5 +1,6 @@
 const mongoose = require("mongoose");
 const Task = require("../models/Task");
+const { logActivity } = require("../utils/activityLogger");
 
 // @desc    Create a new task
 // @route   POST /api/tasks
@@ -35,6 +36,29 @@ exports.createTask = async (req, res) => {
       createdBy: req.user._id,
     });
 
+    // Log activity
+    logActivity(
+      req.user._id,
+      "Task Created",
+      "Task",
+      task._id,
+      `Task created: ${task.title}`,
+      req.ip,
+      req.headers["user-agent"]
+    );
+
+    if (task.assignedTo) {
+      logActivity(
+        req.user._id,
+        "Task Assigned",
+        "Task",
+        task._id,
+        `Task assigned to user ID: ${task.assignedTo}`,
+        req.ip,
+        req.headers["user-agent"]
+      );
+    }
+
     return res.status(201).json({
       success: true,
       data: task,
@@ -60,12 +84,78 @@ exports.createTask = async (req, res) => {
 // @access  Private
 exports.getTasks = async (req, res) => {
   try {
-    const tasks = await Task.find({ createdBy: req.user._id })
-      .populate("assignedTo", "name email avatar role")
-      .populate("createdBy", "name email avatar role");
+    let page = parseInt(req.query.page, 10);
+    let limit = parseInt(req.query.limit, 10);
+
+    // Validate page
+    if (req.query.page !== undefined && (isNaN(page) || page <= 0)) {
+      return res.status(400).json({
+        success: false,
+        message: "Page number must be a positive integer",
+      });
+    }
+
+    // Validate limit
+    if (req.query.limit !== undefined && (isNaN(limit) || limit <= 0)) {
+      return res.status(400).json({
+        success: false,
+        message: "Limit must be a positive integer",
+      });
+    }
+
+    page = page || 1;
+    limit = limit || 10;
+    const skip = (page - 1) * limit;
+
+    // Build query object
+    const query = { createdBy: req.user._id };
+
+    // Search functionality (case-insensitive regex search in title and description)
+    if (req.query.search) {
+      const searchRegex = new RegExp(req.query.search.trim(), "i");
+      query.$or = [
+        { title: searchRegex },
+        { description: searchRegex }
+      ];
+    }
+
+    // Filters (status, priority, category)
+    if (req.query.status) {
+      query.status = req.query.status;
+    }
+    if (req.query.priority) {
+      query.priority = req.query.priority;
+    }
+    if (req.query.category) {
+      query.category = req.query.category;
+    }
+
+    // Sorting (default to descending createdAt)
+    let sortBy = "-createdAt";
+    if (req.query.sort) {
+      // Replace commas with spaces if multiple sort fields are provided
+      sortBy = req.query.sort.split(",").join(" ");
+    }
+
+    // Run count and find queries in parallel for efficiency
+    const [total, tasks] = await Promise.all([
+      Task.countDocuments(query),
+      Task.find(query)
+        .populate("assignedTo", "name email avatar role")
+        .populate("createdBy", "name email avatar role")
+        .sort(sortBy)
+        .skip(skip)
+        .limit(limit)
+    ]);
+
+    const pages = Math.ceil(total / limit) || 1;
 
     return res.status(200).json({
       success: true,
+      count: tasks.length,
+      total,
+      page,
+      pages,
       data: tasks,
     });
   } catch (error) {
@@ -180,6 +270,41 @@ exports.updateTask = async (req, res) => {
       .populate("assignedTo", "name email avatar role")
       .populate("createdBy", "name email avatar role");
 
+    // Log activity
+    logActivity(
+      req.user._id,
+      "Task Updated",
+      "Task",
+      task._id,
+      `Task updated: ${task.title}`,
+      req.ip,
+      req.headers["user-agent"]
+    );
+
+    if (status !== undefined) {
+      logActivity(
+        req.user._id,
+        "Task Status Changed",
+        "Task",
+        task._id,
+        `Task status changed to: ${status}`,
+        req.ip,
+        req.headers["user-agent"]
+      );
+    }
+
+    if (assignedTo !== undefined) {
+      logActivity(
+        req.user._id,
+        "Task Assigned",
+        "Task",
+        task._id,
+        assignedTo ? `Task assigned to user ID: ${assignedTo}` : `Task unassigned`,
+        req.ip,
+        req.headers["user-agent"]
+      );
+    }
+
     return res.status(200).json({
       success: true,
       data: task,
@@ -233,6 +358,17 @@ exports.deleteTask = async (req, res) => {
     }
 
     await Task.findByIdAndDelete(id);
+
+    // Log activity
+    logActivity(
+      req.user._id,
+      "Task Deleted",
+      "Task",
+      task._id,
+      `Task deleted: ${task.title}`,
+      req.ip,
+      req.headers["user-agent"]
+    );
 
     return res.status(200).json({
       success: true,
