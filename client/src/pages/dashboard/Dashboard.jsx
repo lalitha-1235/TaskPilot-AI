@@ -347,10 +347,10 @@ const recentTasks = dashboardData?.recentTasks || [];
                   <td className="py-3 px-3 text-zinc-400">{task.project}</td>
                   <td className="py-3 px-3">
                     <div className="flex items-center gap-2">
-                      <div className="size-5 rounded-full bg-zinc-800 text-[9px] flex items-center justify-center font-bold text-zinc-200">
-                        {task.assignee.charAt(0)}
-                      </div>
-                      <span>{task.assignee}</span>
+                    <div className="size-5 rounded-full bg-zinc-800 text-[9px] flex items-center justify-center font-bold text-zinc-200">
+  {task.assignee?.name?.charAt(0) || "U"}
+</div>
+<span>{task.assignee?.name || "Unassigned"}</span>
                     </div>
                   </td>
                   <td className="py-3 px-3">
