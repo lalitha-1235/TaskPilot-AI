@@ -7,10 +7,11 @@ const { logActivity } = require("../utils/activityLogger");
 // @access  Private
 exports.createTask = async (req, res) => {
   try {
-    const { title, description, status, priority, dueDate, category, assignedTo } = req.body;
+    const { title, name, description, status, priority, dueDate, category, assignedTo, project, progress, riskScore, assignee } = req.body;
 
+    const taskTitle = title || name;
     // Validate required fields
-    if (!title) {
+    if (!taskTitle) {
       return res.status(400).json({
         success: false,
         message: "Please provide a task title",
@@ -26,13 +27,18 @@ exports.createTask = async (req, res) => {
     }
 
     const task = await Task.create({
-      title,
-      description,
+      title: taskTitle,
+      name: taskTitle,
+      description: description || "",
       status: status || "Todo",
       priority: priority || "Medium",
       dueDate: dueDate || null,
       category: category || "General",
       assignedTo: assignedTo || null,
+      project: project || "General",
+      progress: parseInt(progress) || 0,
+      riskScore: parseInt(riskScore) || 20,
+      assignee: assignee || null,
       createdBy: req.user._id,
     });
 
@@ -103,61 +109,82 @@ exports.getTasks = async (req, res) => {
       });
     }
 
-    page = page || 1;
-    limit = limit || 10;
-    const skip = (page - 1) * limit;
+    // Determine if pagination is requested (if no page/limit query is supplied, default to returning all tasks)
+    const isPaginated = req.query.page !== undefined || req.query.limit !== undefined;
 
     // Build query object
     const query = { createdBy: req.user._id };
 
-    // Search functionality (case-insensitive regex search in title and description)
+    // Search functionality (case-insensitive regex search in title, description, and project)
     if (req.query.search) {
       const searchRegex = new RegExp(req.query.search.trim(), "i");
       query.$or = [
         { title: searchRegex },
-        { description: searchRegex }
+        { name: searchRegex },
+        { description: searchRegex },
+        { project: searchRegex },
+        { "assignee.name": searchRegex }
       ];
     }
 
     // Filters (status, priority, category)
-    if (req.query.status) {
+    if (req.query.status && req.query.status !== "All") {
       query.status = req.query.status;
     }
-    if (req.query.priority) {
+    if (req.query.priority && req.query.priority !== "All") {
       query.priority = req.query.priority;
     }
-    if (req.query.category) {
+    if (req.query.category && req.query.category !== "All") {
       query.category = req.query.category;
+    }
+    if (req.query.project && req.query.project !== "All Projects") {
+      query.project = req.query.project;
     }
 
     // Sorting (default to descending createdAt)
     let sortBy = "-createdAt";
     if (req.query.sort) {
-      // Replace commas with spaces if multiple sort fields are provided
       sortBy = req.query.sort.split(",").join(" ");
     }
 
-    // Run count and find queries in parallel for efficiency
-    const [total, tasks] = await Promise.all([
-      Task.countDocuments(query),
-      Task.find(query)
+    if (isPaginated) {
+      page = page || 1;
+      limit = limit || 10;
+      const skip = (page - 1) * limit;
+
+      const [total, tasks] = await Promise.all([
+        Task.countDocuments(query),
+        Task.find(query)
+          .populate("assignedTo", "name email avatar role")
+          .populate("createdBy", "name email avatar role")
+          .sort(sortBy)
+          .skip(skip)
+          .limit(limit)
+      ]);
+
+      const pages = Math.ceil(total / limit) || 1;
+
+      return res.status(200).json({
+        success: true,
+        count: tasks.length,
+        total,
+        page,
+        pages,
+        data: tasks,
+      });
+    } else {
+      // Non-paginated: Return all matched tasks directly (useful for the table layout)
+      const tasks = await Task.find(query)
         .populate("assignedTo", "name email avatar role")
         .populate("createdBy", "name email avatar role")
-        .sort(sortBy)
-        .skip(skip)
-        .limit(limit)
-    ]);
+        .sort(sortBy);
 
-    const pages = Math.ceil(total / limit) || 1;
-
-    return res.status(200).json({
-      success: true,
-      count: tasks.length,
-      total,
-      page,
-      pages,
-      data: tasks,
-    });
+      return res.status(200).json({
+        success: true,
+        count: tasks.length,
+        data: tasks,
+      });
+    }
   } catch (error) {
     return res.status(500).json({
       success: false,
@@ -218,7 +245,7 @@ exports.getTask = async (req, res) => {
 exports.updateTask = async (req, res) => {
   try {
     const { id } = req.params;
-    const { title, description, status, priority, dueDate, category, assignedTo } = req.body;
+    const { title, name, description, status, priority, dueDate, category, assignedTo, project, progress, riskScore, assignee } = req.body;
 
     // Validate ObjectId format
     if (!mongoose.Types.ObjectId.isValid(id)) {
@@ -255,13 +282,21 @@ exports.updateTask = async (req, res) => {
 
     // Update fields
     const updates = {};
-    if (title !== undefined) updates.title = title;
+    const taskTitle = title || name;
+    if (taskTitle !== undefined) {
+      updates.title = taskTitle;
+      updates.name = taskTitle;
+    }
     if (description !== undefined) updates.description = description;
     if (status !== undefined) updates.status = status;
     if (priority !== undefined) updates.priority = priority;
     if (dueDate !== undefined) updates.dueDate = dueDate;
     if (category !== undefined) updates.category = category;
     if (assignedTo !== undefined) updates.assignedTo = assignedTo;
+    if (project !== undefined) updates.project = project;
+    if (progress !== undefined) updates.progress = parseInt(progress);
+    if (riskScore !== undefined) updates.riskScore = parseInt(riskScore);
+    if (assignee !== undefined) updates.assignee = assignee;
 
     task = await Task.findByIdAndUpdate(id, updates, {
       new: true,

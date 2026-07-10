@@ -1,5 +1,14 @@
 const mongoose = require("mongoose");
 
+const AssigneeSchema = new mongoose.Schema(
+  {
+    name: { type: String, required: true, trim: true },
+    initials: { type: String, required: true, trim: true, maxlength: 3 },
+    color: { type: String, default: "" },
+  },
+  { _id: false }
+);
+
 const TaskSchema = new mongoose.Schema(
   {
     title: {
@@ -8,16 +17,26 @@ const TaskSchema = new mongoose.Schema(
       trim: true,
       maxlength: [100, "Title cannot exceed 100 characters"],
     },
+    name: {
+      type: String,
+      trim: true,
+      default: "",
+    },
     description: {
       type: String,
       trim: true,
       default: "",
     },
+    project: {
+      type: String,
+      trim: true,
+      default: "General",
+    },
     status: {
       type: String,
       enum: {
-        values: ["Todo", "In Progress", "Completed"],
-        message: "Status must be either: Todo, In Progress, or Completed",
+        values: ["Todo", "In Progress", "Review", "Completed", "Blocked"],
+        message: "Status must be either: Todo, In Progress, Review, Completed, or Blocked",
       },
       default: "Todo",
     },
@@ -29,6 +48,18 @@ const TaskSchema = new mongoose.Schema(
       },
       default: "Medium",
     },
+    progress: {
+      type: Number,
+      min: [0, "Progress cannot be less than 0"],
+      max: [100, "Progress cannot exceed 100"],
+      default: 0,
+    },
+    riskScore: {
+      type: Number,
+      min: [0, "Risk score cannot be less than 0"],
+      max: [100, "Risk score cannot exceed 100"],
+      default: 20,
+    },
     dueDate: {
       type: Date,
       default: null,
@@ -37,6 +68,10 @@ const TaskSchema = new mongoose.Schema(
       type: String,
       trim: true,
       default: "General",
+    },
+    assignee: {
+      type: AssigneeSchema,
+      default: null,
     },
     assignedTo: {
       type: mongoose.Schema.Types.ObjectId,

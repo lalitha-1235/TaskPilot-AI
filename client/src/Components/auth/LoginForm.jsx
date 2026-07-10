@@ -1,3 +1,4 @@
+import { loginUser } from "@/services/authService";
 import { useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import { motion } from "framer-motion";
@@ -50,21 +51,39 @@ function LoginForm() {
     return Object.keys(tempErrors).length === 0;
   };
 
-  const handleSubmit = (e) => {
+  const handleSubmit = async (e) => {
     e.preventDefault();
+  
     if (!validate()) return;
-
-    setIsLoading(true);
-    // Simulate API request
-    setTimeout(() => {
-      setIsLoading(false);
+  
+    try {
+      setIsLoading(true);
+  
+      const response = await loginUser({
+        email: formData.email,
+        password: formData.password,
+      });
+  
+      localStorage.setItem(
+        "user",
+        JSON.stringify(response.user)
+      );
+  
       setLoginSuccess(true);
-      
-      // Navigate to dashboard after showing success
+  
       setTimeout(() => {
         navigate("/dashboard");
       }, 1000);
-    }, 1500);
+  
+    } catch (error) {
+      setErrors({
+        password:
+          error.response?.data?.message ||
+          "Invalid email or password",
+      });
+    } finally {
+      setIsLoading(false);
+    }
   };
 
   return (

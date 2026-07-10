@@ -14,20 +14,18 @@ const ActivityLogSchema = new mongoose.Schema(
     },
     entityType: {
       type: String,
-      enum: {
-        values: [
-          "Task",
-          "Team",
-          "Comment",
-          "Notification",
-          "Invitation",
-          "File",
-          "Profile",
-          "Authentication",
-          "System",
-        ],
-        message: "Entity type must be one of: Task, Team, Comment, Notification, Invitation, File, Profile, Authentication, System",
-      },
+      enum: [
+        "Task",
+        "Team",
+        "Comment",
+        "Notification",
+        "Invitation",
+        "File",
+        "Profile",
+        "Authentication",
+        "System",
+        "ChatMessage",
+      ],
       required: [true, "Entity type is required"],
     },
     entityId: {

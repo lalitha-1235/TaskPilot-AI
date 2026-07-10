@@ -1,4 +1,5 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
+import { getDashboard } from "@/services/dashboardService";
 import { Link } from "react-router-dom";
 import { motion } from "framer-motion";
 import {
@@ -24,89 +25,69 @@ function DashboardHome() {
     },
   ]);
   const [isAiResponding, setIsAiResponding] = useState(false);
+  const [dashboardData, setDashboardData] = useState(null);
 
-  const metrics = [
-    {
-      title: "Completed Tasks",
-      value: "28 / 32",
-      change: "+12.4%",
-      trend: "up",
-      desc: "Completed this sprint",
-      icon: CheckCircle2,
-      color: "text-emerald-400",
-      bg: "bg-emerald-500/10",
-    },
-    {
-      title: "Active AI Agents",
-      value: "4 running",
-      change: "Optimal",
-      trend: "up",
-      desc: "Monitoring workflows",
-      icon: Sparkles,
-      color: "text-cyan-400",
-      bg: "bg-cyan-500/10",
-    },
-    {
-      title: "Team Velocity",
-      value: "94.2 pts",
-      change: "+8.3%",
-      trend: "up",
-      desc: "Average velocity score",
-      icon: TrendingUp,
-      color: "text-purple-400",
-      bg: "bg-purple-500/10",
-    },
-    {
-      title: "At-Risk Items",
-      value: "1 blocked",
-      change: "Attention required",
-      trend: "down",
-      desc: "Blocked task: E2E Pipeline",
-      icon: AlertTriangle,
-      color: "text-amber-400",
-      bg: "bg-amber-500/10",
-    },
-  ];
+useEffect(() => {
+  console.log("Dashboard useEffect running");
 
-  const recentTasks = [
-    {
-      id: "TP-102",
-      title: "Design glassmorphism authentication screens",
-      project: "TaskPilot Auth System",
-      assignee: "Sarah Jenkins",
-      priority: "High",
-      status: "In Review",
-      color: "text-purple-400 bg-purple-500/10 border-purple-500/20",
-    },
-    {
-      id: "TP-105",
-      title: "Integrate dashboard layout & routes configuration",
-      project: "TaskPilot Core Layout",
-      assignee: "Alex Riviera",
-      priority: "High",
-      status: "In Progress",
-      color: "text-cyan-400 bg-cyan-500/10 border-cyan-500/20",
-    },
-    {
-      id: "TP-98",
-      title: "Investigate AWS autoscaling limits & trigger node health checks",
-      project: "Cloud Ops",
-      assignee: "AI Agent",
-      priority: "Medium",
-      status: "Completed",
-      color: "text-emerald-400 bg-emerald-500/10 border-emerald-500/20",
-    },
-    {
-      id: "TP-109",
-      title: "Resolve E2E Testing Pipeline mock compilation logs",
-      project: "CI Pipeline Integration",
-      assignee: "Marcus Chen",
-      priority: "High",
-      status: "Blocked",
-      color: "text-red-400 bg-red-500/10 border-red-500/20",
-    },
-  ];
+  const fetchDashboard = async () => {
+    try {
+      const data = await getDashboard();
+      console.log("Dashboard Data:", data);
+      setDashboardData(data);
+    } catch (error) {
+      console.error("Dashboard Error:", error);
+    }
+  };
 
+  fetchDashboard();
+}, []);
+console.log("dashboardData state:", dashboardData);
+
+const metrics = [
+  {
+    title: "Total Tasks",
+    value: dashboardData?.stats?.totalTasks || 0,
+    change: "",
+    trend: "up",
+    desc: "All tasks",
+    icon: CheckCircle2,
+    color: "text-emerald-400",
+    bg: "bg-emerald-500/10",
+  },
+  {
+    title: "Completed Tasks",
+    value: dashboardData?.stats?.completedTasks || 0,
+    change: "",
+    trend: "up",
+    desc: "Completed",
+    icon: Sparkles,
+    color: "text-cyan-400",
+    bg: "bg-cyan-500/10",
+  },
+  {
+    title: "In Progress",
+    value: dashboardData?.stats?.inProgressTasks || 0,
+    change: "",
+    trend: "up",
+    desc: "Currently active",
+    icon: TrendingUp,
+    color: "text-purple-400",
+    bg: "bg-purple-500/10",
+  },
+  {
+    title: "Teams",
+    value: dashboardData?.teams?.totalTeams || 0,
+    change: "",
+    trend: "up",
+    desc: "Assigned teams",
+    icon: UserCheck,
+    color: "text-amber-400",
+    bg: "bg-amber-500/10",
+  },
+];
+
+const recentTasks = dashboardData?.recentTasks || [];
   const aiInsights = [
     {
       id: 1,
@@ -150,9 +131,9 @@ function DashboardHome() {
       {/* Header section */}
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
         <div>
-          <h1 className="text-3xl font-extrabold tracking-tight bg-gradient-to-r from-zinc-100 via-zinc-200 to-zinc-400 bg-clip-text text-transparent">
-            Workspace Overview
-          </h1>
+        <h1 className="text-3xl font-extrabold tracking-tight bg-gradient-to-r from-zinc-100 via-zinc-200 to-zinc-400 bg-clip-text text-transparent">
+      Welcome, {dashboardData?.user?.name || "User"}
+       </h1>
           <p className="text-sm text-zinc-400 mt-1">
             Real-time AI metrics and project workspace status.
           </p>
@@ -356,7 +337,8 @@ function DashboardHome() {
               </tr>
             </thead>
             <tbody className="divide-y divide-zinc-900/60 text-zinc-300">
-              {recentTasks.map((task) => (
+            {recentTasks.length > 0 ? (
+  recentTasks.map((task) => (
                 <tr key={task.id} className="hover:bg-zinc-950/40 transition-colors">
                   <td className="py-3 px-3 font-bold text-zinc-400">{task.id}</td>
                   <td className="py-3 px-3 font-semibold text-zinc-200 max-w-sm truncate">
@@ -382,7 +364,14 @@ function DashboardHome() {
                     </span>
                   </td>
                 </tr>
-              ))}
+              ))
+            ) : (
+              <tr>
+                <td colSpan="6" className="text-center py-6 text-zinc-500">
+                  No tasks found
+                </td>
+              </tr>
+            )}
             </tbody>
           </table>
         </div>

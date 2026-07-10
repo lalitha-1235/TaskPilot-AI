@@ -1,6 +1,8 @@
-// Load environment variables FIRST — before any other imports that may read process.env
 const dotenv = require("dotenv");
 dotenv.config();
+
+console.log("SERVER STARTED");
+console.log("GROQ KEY:", process.env.GROQ_API_KEY ? "FOUND" : "NOT FOUND");
 
 const express = require("express");
 const cors = require("cors");
@@ -19,6 +21,11 @@ const fileRoutes = require("./routes/fileRoutes");
 const teamInvitationRoutes = require("./routes/teamInvitationRoutes");
 const activityLogRoutes = require("./routes/activityLogRoutes");
 const adminRoutes = require("./routes/adminRoutes");
+const projectRoutes = require("./routes/projectRoutes");
+const teamMemberRoutes = require("./routes/teamMemberRoutes");
+const calendarRoutes = require("./routes/calendarRoutes");
+const reportRoutes = require("./routes/reportRoutes");
+const assistantRoutes = require("./routes/assistantRoutes");
 
 connectDB();
 
@@ -49,6 +56,11 @@ app.use("/api/files", fileRoutes);
 app.use("/api/team-invitations", teamInvitationRoutes);
 app.use("/api/activity-logs", activityLogRoutes);
 app.use("/api/admin", adminRoutes);
+app.use("/api/projects", projectRoutes);
+app.use("/api/team-members", teamMemberRoutes);
+app.use("/api/calendar", calendarRoutes);
+app.use("/api/reports", reportRoutes);
+app.use("/api/assistant", assistantRoutes);
 
 app.get("/", (req, res) => {
   res.send("TaskPilot AI Backend Running");

@@ -18,48 +18,18 @@ import {
   FileCode2,
   FolderKanban,
   Target,
-  Clock,
   Bot,
   User,
-  ArrowUpRight,
   MessageSquare,
   Wand2,
 } from "lucide-react";
 import { RiRobot2Line } from "react-icons/ri";
 import { FiTerminal } from "react-icons/fi";
-
-// ─── AI Response Simulation ───────────────────────────────────────────────────
-const AI_RESPONSES = {
-  pipeline: {
-    text: `I've analyzed the **E2E Testing Pipeline** failure.\n\n**Root Cause:** The build fails at \`mock-test.js:42\` due to a missing dependency \`tw-animate-css\` in the test environment.\n\n**Recommended Fix:**\n\`\`\`bash\nnpm install tw-animate-css --save-dev\n\`\`\`\n\nI can also create a pull request that:\n1. Adds the missing dependency\n2. Updates the CI config to cache node_modules\n3. Adds a retry policy for flaky tests\n\nShall I proceed with the auto-fix?`,
-    type: "analysis",
-  },
-  sprint: {
-    text: `Here's the **Sprint 4 Status Report:**\n\n| Metric | Value |\n|--------|-------|\n| Completion | 87.5% (28/32 tasks) |\n| Velocity | 94.2 pts (+8.3%) |\n| Blocked | 1 item (E2E Pipeline) |\n| At Risk | 2 items nearing deadline |\n\n**Recommendation:** Move the 2 pending items to Sprint 5 and auto-assign the blocked task to AI Agent for resolution. This will close Sprint 4 at 93.75% completion.\n\nWould you like me to generate the sprint outline?`,
-    type: "report",
-  },
-  review: {
-    text: `**Code Review Summary — Auth Module (PR #47)**\n\n✅ **Security:** JWT refresh token rotation implemented correctly\n✅ **Performance:** Login API response time: ~120ms (within target)\n⚠️ **Warning:** Password hashing uses bcrypt with cost=10. Recommend upgrading to cost=12 for production.\n\n\`\`\`javascript\n// Current (PR #47)\nconst hash = await bcrypt.hash(password, 10);\n\n// Recommended\nconst hash = await bcrypt.hash(password, 12);\n\`\`\`\n\n📝 **Style:** 2 minor ESLint warnings in \`authController.js\` (unused imports). Auto-fixable.\n\nOverall: **Approve with minor changes**. Shall I auto-fix the ESLint issues?`,
-    type: "code",
-  },
-  velocity: {
-    text: `**Team Velocity Analysis (Last 12 Weeks):**\n\n📈 Sprint velocity has increased **30.5%** from W1 (72 pts) → W12 (94.2 pts).\n\n**Top Performers:**\n1. 🥇 Pilot Agent α — 100% velocity, 74 tasks resolved\n2. 🥈 Priya Nair — 99% velocity, 55 tasks\n3. 🥉 Sarah Jenkins — 98% velocity, 42 tasks\n\n**AI Impact:** 47 tasks auto-resolved this month, saving approximately **38 engineering hours**.\n\n**Forecast:** At current trajectory, Q3 backlog will clear **2 weeks ahead of schedule**. I recommend expanding AI auto-assignment to Code Review and QA workflows.`,
-    type: "report",
-  },
-  default: {
-    text: `I've processed your request. Here's what I found:\n\nBased on current workspace data, I can help you with:\n- **Task Analysis** — blockers, risk scoring, auto-resolution\n- **Sprint Planning** — velocity forecasting, workload distribution\n- **Code Reviews** — automated quality checks, dependency audits\n- **Team Insights** — performance metrics, availability optimization\n\nCould you provide more details about what you'd like me to focus on?`,
-    type: "general",
-  },
-};
-
-function getAIResponse(prompt) {
-  const p = prompt.toLowerCase();
-  if (p.includes("pipeline") || p.includes("block") || p.includes("e2e") || p.includes("fix")) return AI_RESPONSES.pipeline;
-  if (p.includes("sprint") || p.includes("plan") || p.includes("status")) return AI_RESPONSES.sprint;
-  if (p.includes("review") || p.includes("code") || p.includes("pr") || p.includes("auth")) return AI_RESPONSES.review;
-  if (p.includes("velocity") || p.includes("team") || p.includes("performance") || p.includes("analytics")) return AI_RESPONSES.velocity;
-  return AI_RESPONSES.default;
-}
+import {
+  getChatHistory,
+  sendChatMessage,
+  clearChatHistory,
+} from "../../services/assistantService";
 
 // ─── Data ─────────────────────────────────────────────────────────────────────
 const SUGGESTED_PROMPTS = [
@@ -102,10 +72,11 @@ const TASK_RECOMMENDATIONS = [
   { id: "TP-106", title: "Audit REST API endpoints",       action: "Auto-generate OpenAPI spec from route files",      priority: "Low" },
 ];
 
-// ─── Initial chat messages ────────────────────────────────────────────────────
+// Welcoming AI message on empty databases
 const INITIAL_MESSAGES = [
   {
-    id: 1,
+    _id: "welcome-message",
+    id: "welcome-message",
     sender: "ai",
     text: `Welcome back! I'm **TaskPilot AI**, your workspace intelligence agent.\n\nI'm currently monitoring **6 active projects** and **268 tasks**. Here's what needs attention:\n\n⚠️ **E2E Testing Pipeline** is blocked — 2 critical tasks unresolved\n📈 Sprint velocity is **up 8.3%** this week\n✅ AI Agent has auto-resolved **3 tasks** since your last session\n\nWhat would you like me to help with?`,
     timestamp: "Just now",
@@ -191,12 +162,30 @@ function ChatMessage({ msg, index }) {
 
 // ─── Main Assistant Page ──────────────────────────────────────────────────────
 export default function Assistant() {
-  const [messages, setMessages] = useState(INITIAL_MESSAGES);
+  const [messages, setMessages] = useState([]);
   const [input, setInput] = useState("");
   const [isTyping, setIsTyping] = useState(false);
   const [toast, setToast] = useState(null);
   const chatEndRef = useRef(null);
   const inputRef = useRef(null);
+
+  // ── Fetch chat history from MongoDB on mount ───────────────────────────────
+  useEffect(() => {
+    fetchHistory();
+  }, []);
+
+  async function fetchHistory() {
+    try {
+      const res = await getChatHistory();
+      if (res.data && res.data.length > 0) {
+        setMessages(res.data);
+      } else {
+        setMessages(INITIAL_MESSAGES);
+      }
+    } catch (err) {
+      setMessages(INITIAL_MESSAGES);
+    }
+  }
 
   useEffect(() => {
     chatEndRef.current?.scrollIntoView({ behavior: "smooth" });
@@ -207,32 +196,40 @@ export default function Assistant() {
     setTimeout(() => setToast(null), 3500);
   }
 
-  function handleSend(promptText) {
+  // ── Send message ───────────────────────────────────────────────────────────
+  async function handleSend(promptText) {
     const text = promptText || input.trim();
     if (!text) return;
 
-    const userMsg = {
-      id: Date.now(),
+    const userLocalMsg = {
+      id: `temp-${Date.now()}`,
       sender: "user",
       text,
       timestamp: new Date().toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" }),
     };
-    setMessages(prev => [...prev, userMsg]);
+
+    setMessages(prev => [...prev, userLocalMsg]);
     setInput("");
     setIsTyping(true);
 
-    // Simulate AI response delay
-    setTimeout(() => {
-      const response = getAIResponse(text);
-      const aiMsg = {
-        id: Date.now() + 1,
-        sender: "ai",
-        text: response.text,
-        timestamp: new Date().toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" }),
-      };
-      setMessages(prev => [...prev, aiMsg]);
+    try {
+      const res = await sendChatMessage(text);
+      const aiMsg = res.data;
+      setMessages(prev => {
+        const filtered = prev.filter(m => m.id !== userLocalMsg.id);
+        return [...filtered, {
+          _id: userLocalMsg.id,
+          id: userLocalMsg.id,
+          sender: "user",
+          text: userLocalMsg.text,
+          timestamp: userLocalMsg.timestamp
+        }, aiMsg];
+      });
+    } catch (err) {
+      showToast(err?.response?.data?.message || "Failed to exchange message.");
+    } finally {
       setIsTyping(false);
-    }, 1200 + Math.random() * 800);
+    }
   }
 
   function handleSubmit(e) {
@@ -240,9 +237,15 @@ export default function Assistant() {
     handleSend();
   }
 
-  function handleClearChat() {
-    setMessages(INITIAL_MESSAGES);
-    showToast("Conversation cleared.");
+  // ── Clear history ──────────────────────────────────────────────────────────
+  async function handleClearChat() {
+    try {
+      await clearChatHistory();
+      setMessages(INITIAL_MESSAGES);
+      showToast("Conversation cleared.");
+    } catch (err) {
+      showToast("Failed to clear chat history.");
+    }
   }
 
   return (
@@ -302,7 +305,7 @@ export default function Assistant() {
           <div className="flex-1 overflow-y-auto p-5 space-y-5 max-h-[520px]">
             <AnimatePresence initial={false}>
               {messages.map((msg, i) => (
-                <ChatMessage key={msg.id} msg={msg} index={i} />
+                <ChatMessage key={msg._id || msg.id} msg={msg} index={i} />
               ))}
             </AnimatePresence>
 

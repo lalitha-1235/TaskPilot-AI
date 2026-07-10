@@ -25,10 +25,16 @@ import {
   TestTube,
   Bot,
   Crown,
+  Trash2,
 } from "lucide-react";
 import { RiRobot2Line } from "react-icons/ri";
 import { FiActivity } from "react-icons/fi";
 import { HiOutlineOfficeBuilding } from "react-icons/hi";
+import {
+  getTeamMembers,
+  createTeamMember,
+  deleteTeamMember,
+} from "../../services/teamService";
 
 // ─── Data ─────────────────────────────────────────────────────────────────────
 const ROLES = ["All", "Engineering", "Design", "DevOps", "QA", "AI Agent", "Leadership"];
@@ -39,156 +45,6 @@ const SKILL_ICONS = {
   Cypress: TestTube, "Jest": TestTube, "ML/AI": Bot, Automation: Bot,
   Strategy: Crown, "System Design": Server, "Tailwind": Palette,
 };
-
-const INITIAL_MEMBERS = [
-  {
-    id: 1,
-    name: "Sarah Jenkins",
-    role: "Engineering",
-    title: "Senior Frontend Engineer",
-    initials: "SJ",
-    gradient: "from-purple-600 to-violet-400",
-    border: "border-purple-500/30",
-    glow: "shadow-purple-500/10",
-    status: "online",
-    email: "sarah@taskpilot.ai",
-    github: "sarahj",
-    location: "San Francisco, CA",
-    joinDate: "Jan 2025",
-    projects: ["TaskPilot Auth System", "Workspace Design Revamp"],
-    skills: ["React", "TypeScript", "Tailwind", "Figma"],
-    aiScore: 94,
-    tasksCompleted: 42,
-    velocity: 98,
-    availability: 88,
-  },
-  {
-    id: 2,
-    name: "Alex Riviera",
-    role: "Engineering",
-    title: "Full-Stack Engineer",
-    initials: "AR",
-    gradient: "from-cyan-500 to-sky-400",
-    border: "border-cyan-500/30",
-    glow: "shadow-cyan-500/10",
-    status: "online",
-    email: "alex@taskpilot.ai",
-    github: "alexr",
-    location: "Austin, TX",
-    joinDate: "Mar 2025",
-    projects: ["AI Workflow Planner", "TaskPilot Core Layout"],
-    skills: ["React", "Node.js", "Python", "System Design"],
-    aiScore: 91,
-    tasksCompleted: 38,
-    velocity: 94,
-    availability: 75,
-  },
-  {
-    id: 3,
-    name: "Marcus Chen",
-    role: "DevOps",
-    title: "DevOps & QA Lead",
-    initials: "MC",
-    gradient: "from-emerald-500 to-teal-400",
-    border: "border-emerald-500/30",
-    glow: "shadow-emerald-500/10",
-    status: "online",
-    email: "marcus@taskpilot.ai",
-    github: "mchen",
-    location: "Seattle, WA",
-    joinDate: "Feb 2025",
-    projects: ["E2E Testing Pipeline", "Cloud Ops"],
-    skills: ["CI/CD", "AWS", "Cypress", "Jest"],
-    aiScore: 87,
-    tasksCompleted: 31,
-    velocity: 88,
-    availability: 90,
-  },
-  {
-    id: 4,
-    name: "Elena Rostova",
-    role: "Design",
-    title: "Lead UX Designer",
-    initials: "ER",
-    gradient: "from-pink-500 to-rose-400",
-    border: "border-pink-500/30",
-    glow: "shadow-pink-500/10",
-    status: "away",
-    email: "elena@taskpilot.ai",
-    github: "elena_r",
-    location: "New York, NY",
-    joinDate: "Apr 2025",
-    projects: ["Workspace Design Revamp", "TaskPilot Auth System"],
-    skills: ["UI/UX", "Figma", "Tailwind", "React"],
-    aiScore: 89,
-    tasksCompleted: 27,
-    velocity: 92,
-    availability: 65,
-  },
-  {
-    id: 5,
-    name: "Jordan Kim",
-    role: "QA",
-    title: "QA Automation Engineer",
-    initials: "JK",
-    gradient: "from-amber-500 to-orange-400",
-    border: "border-amber-500/30",
-    glow: "shadow-amber-500/10",
-    status: "offline",
-    email: "jordan@taskpilot.ai",
-    github: "jordank",
-    location: "Chicago, IL",
-    joinDate: "May 2025",
-    projects: ["E2E Testing Pipeline"],
-    skills: ["Cypress", "Jest", "Python", "Automation"],
-    aiScore: 82,
-    tasksCompleted: 19,
-    velocity: 85,
-    availability: 72,
-  },
-  {
-    id: 6,
-    name: "Priya Nair",
-    role: "Leadership",
-    title: "Engineering Manager",
-    initials: "PN",
-    gradient: "from-indigo-500 to-blue-400",
-    border: "border-indigo-500/30",
-    glow: "shadow-indigo-500/10",
-    status: "online",
-    email: "priya@taskpilot.ai",
-    github: "priyanair",
-    location: "Remote",
-    joinDate: "Jan 2025",
-    projects: ["TaskPilot Core Layout", "AI Workflow Planner", "Cloud Ops"],
-    skills: ["Strategy", "System Design", "React", "Node.js"],
-    aiScore: 96,
-    tasksCompleted: 55,
-    velocity: 99,
-    availability: 80,
-  },
-  {
-    id: 7,
-    name: "Pilot Agent α",
-    role: "AI Agent",
-    title: "Autonomous AI Agent",
-    initials: "AI",
-    gradient: "from-purple-500 via-cyan-500 to-purple-500",
-    border: "border-purple-400/40",
-    glow: "shadow-purple-500/20",
-    status: "online",
-    email: "agent@taskpilot.ai",
-    github: "—",
-    location: "Cloud",
-    joinDate: "Jun 2025",
-    projects: ["Cloud Ops", "AI Workflow Planner", "E2E Testing Pipeline"],
-    skills: ["ML/AI", "Automation", "Python", "CI/CD"],
-    aiScore: 100,
-    tasksCompleted: 74,
-    velocity: 100,
-    availability: 100,
-  },
-];
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
 function getStatusDot(status) {
@@ -224,7 +80,7 @@ function getScoreColor(score) {
 }
 
 // ─── Member Detail Drawer ─────────────────────────────────────────────────────
-function MemberDrawer({ member, onClose }) {
+function MemberDrawer({ member, onClose, onDelete }) {
   if (!member) return null;
   const statusLabel = getStatusLabel(member.status);
 
@@ -246,8 +102,14 @@ function MemberDrawer({ member, onClose }) {
         <div className={`h-28 bg-gradient-to-br ${member.gradient} opacity-20 absolute top-0 left-0 right-0 pointer-events-none`} />
 
         <div className="relative p-6 space-y-6">
-          {/* Close */}
-          <div className="flex justify-end">
+          {/* Close + Delete */}
+          <div className="flex justify-between items-center">
+            <button
+              onClick={() => { onDelete(member); onClose(); }}
+              className="text-zinc-600 hover:text-red-400 p-1.5 rounded-lg hover:bg-red-500/10 transition-colors cursor-pointer flex items-center gap-1.5 text-[11px] font-semibold"
+            >
+              <Trash2 size={13} /> Remove
+            </button>
             <button onClick={onClose} className="text-zinc-500 hover:text-zinc-300 p-1.5 rounded-lg hover:bg-zinc-900 transition-colors cursor-pointer">
               <X size={16} />
             </button>
@@ -290,7 +152,7 @@ function MemberDrawer({ member, onClose }) {
               { icon: Mail,   label: member.email },
               { icon: GitBranch, label: member.github !== "—" ? `github.com/${member.github}` : "—" },
               { icon: Globe,  label: member.location },
-              { icon: Clock,  label: `Joined ${member.joinDate}` },
+              { icon: Clock,  label: `Joined ${member.joinDate || new Date(member.createdAt).toLocaleDateString("en-US", { month: "short", year: "numeric" })}` },
             ].map(({ icon: Icon, label }) => (
               <div key={label} className="flex items-center gap-2.5 text-zinc-400">
                 <Icon size={13} className="text-zinc-600 shrink-0" />
@@ -303,7 +165,7 @@ function MemberDrawer({ member, onClose }) {
           <div>
             <p className="text-[10px] uppercase font-bold tracking-wider text-zinc-500 mb-2">Skills</p>
             <div className="flex flex-wrap gap-1.5">
-              {member.skills.map(skill => (
+              {(member.skills || []).map(skill => (
                 <span key={skill} className="text-[10px] font-semibold px-2 py-0.5 rounded-lg bg-zinc-900 border border-zinc-800 text-zinc-300">
                   {skill}
                 </span>
@@ -315,12 +177,15 @@ function MemberDrawer({ member, onClose }) {
           <div>
             <p className="text-[10px] uppercase font-bold tracking-wider text-zinc-500 mb-2">Assigned Projects</p>
             <div className="space-y-1.5">
-              {member.projects.map(p => (
+              {(member.projects || []).map(p => (
                 <div key={p} className="flex items-center gap-2 text-xs text-zinc-400 bg-zinc-900/40 border border-zinc-800/60 px-3 py-2 rounded-xl">
                   <Briefcase size={11} className="text-zinc-600 shrink-0" />
                   {p}
                 </div>
               ))}
+              {(!member.projects || member.projects.length === 0) && (
+                <p className="text-xs text-zinc-600 italic">No projects assigned</p>
+              )}
             </div>
           </div>
 
@@ -352,34 +217,38 @@ const EMPTY_FORM = {
   skillsRaw: "", aiScore: 90, velocity: 88, availability: 80,
 };
 
-function AddMemberModal({ open, onClose, onAdd }) {
+const GRADIENTS = [
+  { gradient: "from-violet-500 to-purple-400", border: "border-purple-500/30", glow: "shadow-purple-500/10" },
+  { gradient: "from-sky-500 to-cyan-400",      border: "border-cyan-500/30",   glow: "shadow-cyan-500/10" },
+  { gradient: "from-rose-500 to-pink-400",     border: "border-pink-500/30",   glow: "shadow-pink-500/10" },
+  { gradient: "from-lime-500 to-emerald-400",  border: "border-emerald-500/30",glow: "shadow-emerald-500/10" },
+  { gradient: "from-amber-500 to-orange-400",  border: "border-amber-500/30",  glow: "shadow-amber-500/10" },
+  { gradient: "from-indigo-500 to-blue-400",   border: "border-indigo-500/30", glow: "shadow-indigo-500/10" },
+];
+
+function AddMemberModal({ open, onClose, onAdd, loading }) {
   const [form, setForm] = useState(EMPTY_FORM);
 
   function handleSubmit(e) {
     e.preventDefault();
     if (!form.name.trim() || !form.email.trim()) return;
+
     const initials = form.name.trim().split(" ").map(w => w[0]).slice(0, 2).join("").toUpperCase();
-    const gradients = [
-      "from-violet-500 to-purple-400", "from-sky-500 to-cyan-400",
-      "from-rose-500 to-pink-400", "from-lime-500 to-emerald-400",
-    ];
-    const grad = gradients[Math.floor(Math.random() * gradients.length)];
+    const pick = GRADIENTS[Math.floor(Math.random() * GRADIENTS.length)];
     const skills = form.skillsRaw.split(",").map(s => s.trim()).filter(Boolean);
 
     onAdd({
-      id: Date.now(),
       name: form.name.trim(),
       title: form.title.trim() || "Team Member",
       role: form.role,
       initials,
-      gradient: grad,
-      border: "border-zinc-700/40",
-      glow: "shadow-zinc-500/10",
+      gradient: pick.gradient,
+      border: pick.border,
+      glow: pick.glow,
       status: form.status,
       email: form.email.trim(),
       github: form.github.trim() || "—",
       location: form.location.trim() || "Remote",
-      joinDate: new Date().toLocaleDateString("en-US", { month: "short", year: "numeric" }),
       projects: [],
       skills: skills.length ? skills : ["React"],
       aiScore: parseInt(form.aiScore) || 90,
@@ -388,7 +257,6 @@ function AddMemberModal({ open, onClose, onAdd }) {
       availability: parseInt(form.availability) || 80,
     });
     setForm(EMPTY_FORM);
-    onClose();
   }
 
   if (!open) return null;
@@ -500,9 +368,9 @@ function AddMemberModal({ open, onClose, onAdd }) {
             <button type="button" onClick={onClose}
               className="h-10 px-4 rounded-xl border border-zinc-800 hover:bg-zinc-900 text-zinc-400 hover:text-zinc-200 transition-colors cursor-pointer font-semibold outline-none text-xs"
             >Cancel</button>
-            <button type="submit"
-              className="h-10 px-5 rounded-xl bg-gradient-to-r from-purple-600 to-cyan-500 hover:from-purple-500 hover:to-cyan-400 text-white font-semibold shadow-lg shadow-purple-500/10 cursor-pointer transition-all active:scale-[0.98] outline-none text-xs"
-            >Add Member</button>
+            <button type="submit" disabled={loading}
+              className="h-10 px-5 rounded-xl bg-gradient-to-r from-purple-600 to-cyan-500 hover:from-purple-500 hover:to-cyan-400 text-white font-semibold shadow-lg shadow-purple-500/10 cursor-pointer transition-all active:scale-[0.98] outline-none text-xs disabled:opacity-60 disabled:cursor-not-allowed"
+            >{loading ? "Adding…" : "Add Member"}</button>
           </div>
         </form>
       </motion.div>
@@ -518,7 +386,7 @@ function MemberCard({ member, index, onClick }) {
 
   return (
     <motion.div
-      key={member.id}
+      key={member._id}
       initial={{ opacity: 0, y: 20 }}
       animate={{ opacity: 1, y: 0 }}
       exit={{ opacity: 0, scale: 0.95 }}
@@ -580,12 +448,12 @@ function MemberCard({ member, index, onClick }) {
 
       {/* Skills */}
       <div className="flex flex-wrap gap-1 mb-4">
-        {member.skills.slice(0, 3).map(skill => (
+        {(member.skills || []).slice(0, 3).map(skill => (
           <span key={skill} className="text-[9px] font-semibold px-2 py-0.5 rounded-lg bg-zinc-900 border border-zinc-800 text-zinc-400">
             {skill}
           </span>
         ))}
-        {member.skills.length > 3 && (
+        {(member.skills || []).length > 3 && (
           <span className="text-[9px] font-semibold px-2 py-0.5 rounded-lg bg-zinc-900 border border-zinc-800 text-zinc-600">
             +{member.skills.length - 3}
           </span>
@@ -594,13 +462,13 @@ function MemberCard({ member, index, onClick }) {
 
       {/* Projects */}
       <div className="space-y-1 mb-4">
-        {member.projects.slice(0, 2).map(p => (
+        {(member.projects || []).slice(0, 2).map(p => (
           <div key={p} className="flex items-center gap-2 text-[10px] text-zinc-500">
             <Briefcase size={9} className="text-zinc-700 shrink-0" />
             <span className="truncate">{p}</span>
           </div>
         ))}
-        {member.projects.length > 2 && (
+        {(member.projects || []).length > 2 && (
           <p className="text-[10px] text-zinc-600 pl-3.5">+{member.projects.length - 2} more</p>
         )}
       </div>
@@ -631,7 +499,10 @@ function MemberCard({ member, index, onClick }) {
 
 // ─── Main Team Page ───────────────────────────────────────────────────────────
 export default function Team() {
-  const [members, setMembers] = useState(INITIAL_MEMBERS);
+  const [members, setMembers] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [saving, setSaving] = useState(false);
+  const [error, setError] = useState(null);
   const [search, setSearch] = useState("");
   const [roleFilter, setRoleFilter] = useState("All");
   const [statusFilter, setStatusFilter] = useState("All");
@@ -639,20 +510,59 @@ export default function Team() {
   const [addModalOpen, setAddModalOpen] = useState(false);
   const [toast, setToast] = useState(null);
 
+  // ── Fetch members from MongoDB ─────────────────────────────────────────────
+  useEffect(() => {
+    fetchMembers();
+  }, []);
+
+  async function fetchMembers() {
+    try {
+      setLoading(true);
+      setError(null);
+      const res = await getTeamMembers();
+      setMembers(res.data || []);
+    } catch (err) {
+      setError(err?.response?.data?.message || "Failed to load team members.");
+    } finally {
+      setLoading(false);
+    }
+  }
+
   function showToast(msg) {
     setToast(msg);
     setTimeout(() => setToast(null), 3800);
   }
 
-  function handleAddMember(data) {
-    setMembers(prev => [data, ...prev]);
-    showToast(`${data.name} has been added to the team.`);
+  // ── Create member ──────────────────────────────────────────────────────────
+  async function handleAddMember(data) {
+    try {
+      setSaving(true);
+      const res = await createTeamMember(data);
+      setMembers(prev => [res.data, ...prev]);
+      setAddModalOpen(false);
+      showToast(`${res.data.name} has been added to the team.`);
+    } catch (err) {
+      showToast(err?.response?.data?.message || "Failed to add member.");
+    } finally {
+      setSaving(false);
+    }
+  }
+
+  // ── Delete member ──────────────────────────────────────────────────────────
+  async function handleDeleteMember(member) {
+    try {
+      await deleteTeamMember(member._id);
+      setMembers(prev => prev.filter(m => m._id !== member._id));
+      showToast(`${member.name} has been removed from the team.`);
+    } catch (err) {
+      showToast(err?.response?.data?.message || "Failed to remove member.");
+    }
   }
 
   // Filter
   const filtered = members.filter(m => {
     const q = search.toLowerCase();
-    const matchSearch = !q || m.name.toLowerCase().includes(q) || m.title.toLowerCase().includes(q) || m.role.toLowerCase().includes(q) || m.skills.some(s => s.toLowerCase().includes(q));
+    const matchSearch = !q || m.name.toLowerCase().includes(q) || m.title.toLowerCase().includes(q) || m.role.toLowerCase().includes(q) || (m.skills || []).some(s => s.toLowerCase().includes(q));
     const matchRole = roleFilter === "All" || m.role === roleFilter;
     const matchStatus = statusFilter === "All" || m.status === statusFilter;
     return matchSearch && matchRole && matchStatus;
@@ -662,8 +572,10 @@ export default function Team() {
   const stats = {
     total: members.length,
     online: members.filter(m => m.status === "online").length,
-    avgScore: Math.round(members.reduce((a, m) => a + m.aiScore, 0) / members.length),
-    totalTasks: members.reduce((a, m) => a + m.tasksCompleted, 0),
+    avgScore: members.length
+      ? Math.round(members.reduce((a, m) => a + (m.aiScore || 0), 0) / members.length)
+      : 0,
+    totalTasks: members.reduce((a, m) => a + (m.tasksCompleted || 0), 0),
   };
 
   return (
@@ -713,10 +625,10 @@ export default function Team() {
       {/* ── Stat Cards ── */}
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
         {[
-          { label: "Total Members",    value: stats.total,      icon: Users,       color: "text-zinc-200",    bg: "bg-zinc-500/10",    border: "border-zinc-700/30" },
-          { label: "Online Now",       value: stats.online,     icon: FiActivity,  color: "text-emerald-400", bg: "bg-emerald-500/10", border: "border-emerald-500/20" },
-          { label: "Avg AI Score",     value: `${stats.avgScore}%`, icon: RiRobot2Line, color: "text-purple-400", bg: "bg-purple-500/10", border: "border-purple-500/20" },
-          { label: "Tasks Completed",  value: stats.totalTasks, icon: CheckCircle2, color: "text-cyan-400",  bg: "bg-cyan-500/10",    border: "border-cyan-500/20" },
+          { label: "Total Members",    value: stats.total,              icon: Users,       color: "text-zinc-200",    bg: "bg-zinc-500/10",    border: "border-zinc-700/30" },
+          { label: "Online Now",       value: stats.online,             icon: FiActivity,  color: "text-emerald-400", bg: "bg-emerald-500/10", border: "border-emerald-500/20" },
+          { label: "Avg AI Score",     value: `${stats.avgScore}%`,     icon: RiRobot2Line,color: "text-purple-400",  bg: "bg-purple-500/10",  border: "border-purple-500/20" },
+          { label: "Tasks Completed",  value: stats.totalTasks,         icon: CheckCircle2,color: "text-cyan-400",    bg: "bg-cyan-500/10",    border: "border-cyan-500/20" },
         ].map((s, i) => {
           const Icon = s.icon;
           return (
@@ -779,8 +691,31 @@ export default function Team() {
         </div>
       </div>
 
-      {/* ── Member Grid ── */}
-      {filtered.length === 0 ? (
+      {/* ── Loading / Error / Member Grid ── */}
+      {loading ? (
+        <motion.div
+          initial={{ opacity: 0 }} animate={{ opacity: 1 }}
+          className="bg-zinc-950/40 border border-zinc-900 rounded-2xl p-14 text-center backdrop-blur-xl"
+        >
+          <div className="size-12 rounded-full bg-zinc-900/60 border border-zinc-800 flex items-center justify-center text-purple-400 mx-auto mb-4 animate-pulse">
+            <Users size={20} />
+          </div>
+          <p className="text-sm font-bold text-zinc-400">Loading team members…</p>
+        </motion.div>
+      ) : error ? (
+        <motion.div
+          initial={{ opacity: 0 }} animate={{ opacity: 1 }}
+          className="bg-red-500/5 border border-red-500/20 rounded-2xl p-10 text-center"
+        >
+          <p className="text-sm font-semibold text-red-400 mb-3">{error}</p>
+          <button
+            onClick={fetchMembers}
+            className="text-xs px-4 py-2 rounded-xl bg-red-500/10 border border-red-500/20 text-red-400 hover:bg-red-500/20 transition-colors cursor-pointer"
+          >
+            Retry
+          </button>
+        </motion.div>
+      ) : filtered.length === 0 ? (
         <motion.div
           initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }}
           className="bg-zinc-950/40 border border-zinc-900 rounded-2xl p-14 text-center backdrop-blur-xl"
@@ -788,9 +723,13 @@ export default function Team() {
           <div className="size-12 rounded-full bg-zinc-900/60 border border-zinc-800 flex items-center justify-center text-zinc-500 mx-auto mb-4">
             <Users size={20} />
           </div>
-          <h3 className="text-sm font-bold text-zinc-300">No members found</h3>
+          <h3 className="text-sm font-bold text-zinc-300">
+            {members.length === 0 ? "No team members yet" : "No members found"}
+          </h3>
           <p className="text-xs text-zinc-500 mt-1 max-w-xs mx-auto">
-            Try adjusting your search or filter to find the right people.
+            {members.length === 0
+              ? "Click \"Add Member\" to onboard your first teammate."
+              : "Try adjusting your search or filter to find the right people."}
           </p>
         </motion.div>
       ) : (
@@ -798,7 +737,7 @@ export default function Team() {
           <AnimatePresence mode="popLayout">
             {filtered.map((member, i) => (
               <MemberCard
-                key={member.id}
+                key={member._id}
                 member={member}
                 index={i}
                 onClick={setSelectedMember}
@@ -809,8 +748,17 @@ export default function Team() {
       )}
 
       {/* ── Modals ── */}
-      <MemberDrawer member={selectedMember} onClose={() => setSelectedMember(null)} />
-      <AddMemberModal open={addModalOpen} onClose={() => setAddModalOpen(false)} onAdd={handleAddMember} />
+      <MemberDrawer
+        member={selectedMember}
+        onClose={() => setSelectedMember(null)}
+        onDelete={handleDeleteMember}
+      />
+      <AddMemberModal
+        open={addModalOpen}
+        onClose={() => setAddModalOpen(false)}
+        onAdd={handleAddMember}
+        loading={saving}
+      />
     </div>
   );
 }
